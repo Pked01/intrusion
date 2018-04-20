@@ -7,11 +7,12 @@ import configparser,datetime
 
 class intrusion (object):
     
-    def __init__(self,video_channel,city_name='vijaywada',log_path=None,config_path=None,output_path=None):
+    def __init__(self,video_channel,city_name='vijaywada',ROI=None,log_path=None,config_path=None,output_path=None):
         self.__project_name = "intrusion"
         self.__city_name = city_name
         self.video_channel = video_channel
         self.start_time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
+        self.ROI =ROI 
         
         if log_path is None:
             self.makedirs_1("../"+self.__city_name+"/"+self.__project_name+"/log_files/",exist_ok=True)
@@ -27,19 +28,23 @@ class intrusion (object):
         if config_path is None:
             self.makedirs_1("../"+self.__city_name+"/"+self.__project_name+"/config_path/",exist_ok=True)
             self.config_path = "../"+self.__city_name+"/"+self.__project_name+"/config_path/"
-            config = configparser.ConfigParser()
-            config.optionxform = str
-            config[self.__project_name +"_"+self.__city_name] = {}
-            config[self.__project_name +"_"+self.__city_name]['video_channel'] = self.video_channel
-            config[self.__project_name +"_"+self.__city_name]['log_path'] = self.log_path
-            config[self.__project_name +"_"+self.__city_name]['config_path'] = self.config_path
-            config[self.__project_name +"_"+self.__city_name]['output_path'] = self.output_path
-            #writing config file
-            with open(self.config_path+self.__project_name+".ini", 'w') as configfile:
-                config.write(configfile)
+            self.write_config()
+
                 
             
-
+    def write_config(self):
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config[self.__project_name +"_"+self.__city_name] = {}
+        config[self.__project_name +"_"+self.__city_name]['video_channel'] = self.video_channel
+        config[self.__project_name +"_"+self.__city_name]['log_path'] = self.log_path
+        config[self.__project_name +"_"+self.__city_name]['config_path'] = self.config_path
+        config[self.__project_name +"_"+self.__city_name]['output_path'] = self.output_path
+        config[self.__project_name +"_"+self.__city_name]['ROI'] = str(self.ROI)
+        #writing config file
+        with open(self.config_path+self.__project_name+".ini", 'w') as configfile:
+            config.write(configfile)
+        
     def makedirs_1(self,path,exist_ok=True):
         try :
             os.makedirs(path)
@@ -66,7 +71,6 @@ class intrusion (object):
         """
         self.start_time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
         self.makedirs_1(self.output_path+"visual_files/"+self.start_time+"/",exist_ok=True)
-        visual_output_path = self.output_path+"visual_files/"+self.start_time+"/"
         
         log_file =open(self.log_path+self.start_time+".txt", "a+")
         
@@ -76,11 +80,12 @@ class intrusion (object):
         # initialize the HOG descriptor/person detector
         hog = cv2.HOGDescriptor()
         hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-        cv2.namedWindow("detection", cv2.WINDOW_NORMAL)
+        if plot:
+            cv2.namedWindow("detection", cv2.WINDOW_NORMAL)
         log_file.write(str(datetime.datetime.now())+"-->Detector Initiated\n")
         
         intrusion_started_time = None
-        bbox1 = None
+        bbox1 = self.ROI
         out = None
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         countdown_time = 0
@@ -97,7 +102,9 @@ class intrusion (object):
                 if bbox1 is None:
                     bbox1 = cv2.selectROI('select_ROI', image)
                     cv2.destroyWindow('select_ROI')
-                    log_file.write(str(datetime.datetime.now())+"--> ROI created "+str(bbox1)+"\n")
+                    self.ROI = bbox1
+                    self.write_config()
+                log_file.write(str(datetime.datetime.now())+"--> ROI created "+str(bbox1)+"\n")
 
 
                 # detect people in the image
