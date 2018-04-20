@@ -71,6 +71,7 @@ class intrusion (object):
         """
         self.start_time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
         self.makedirs_1(self.output_path+"visual_files/"+self.start_time+"/",exist_ok=True)
+        visual_output_path = self.output_path+"visual_files/"+self.start_time+"/"
         
         log_file =open(self.log_path+self.start_time+".txt", "a+")
         
@@ -118,7 +119,7 @@ class intrusion (object):
             #     # fairly large overlap threshold to try to maintain overlapping
             #     # boxes that are still people
                 rects = np.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
-                pick = non_max_suppression(rects, probs=None, overlapThresh=0.4)
+                pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
                 cv2.rectangle(image,(bbox1[0],bbox1[1]),(bbox1[0]+bbox1[2],bbox1[1]+bbox1[3]),(255,0,0),1)
 
                     #rects = [[i[0],i[1],i[2]-i[1],i[3]-i[2]] for i in pick]
@@ -130,11 +131,13 @@ class intrusion (object):
                 for (xA, yA, xB, yB) in pick:
                     cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
                 #------------------------------if intrusion happens------------------------
+                #print(intrusion_started_time,countdown_time)
                 if any(res):
                     if ((intrusion_started_time is None) and (countdown_time==0)):
+                        #print('creating video instance')
                         intrusion_started_time = datetime.datetime.now()
                         out = cv2.VideoWriter(visual_output_path+intrusion_started_time.strftime("%Y_%m_%d_%H_%M_%S")+".avi",fourcc, 20.0, (image.shape[1],image.shape[0]))
-                    countdown_time = 3  # extra time fow which video is going to be written
+                    countdown_time = 45  # extra time fow which video is going to be written
 
                     ## Do all shit here...event happened...
                     ## more than one human detected
@@ -147,10 +150,11 @@ class intrusion (object):
                 else :
                     intrustion_stopped = True
                     intrusion_started_time = None
-                    countdown_time-=1
-                    if ((countdown_time==0 )and (out is not None)) :
-                        out.release()
-                        out = None
+                    if out is not None:
+                        countdown_time-=1
+                        if (countdown_time==0 ):
+                            out.release()
+                            out = None
 
                 # draw the final bounding boxes
                 if plot:
@@ -163,10 +167,13 @@ class intrusion (object):
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
+                print(e,exc_type, fname, exc_tb.tb_lineno)
                 log_file.write(str(datetime.datetime.now())+"--> Exception"+str(e)+str(exc_type)+" "+str(fname)+" "+ str(exc_tb.tb_lineno))
             
 
+            
+        
+        
             
         
 intr = intrusion('rtsp://192.168.20.9/6d801f1f-a9aa-449a-85d3-88608e5ee67b/6d801f1f-a9aa-449a-85d3-88608e5ee67b_vs1?token=6d801f1f-a9aa-449a-85d3-88608e5ee67b^LVERAMOTD^50^26^26^1657790795^d660cf85eebea453b0c933b63025aedeb9c22fea&username=admin',ROI=(228, 57, 149, 154))
